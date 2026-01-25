@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Presence API Demo</title>
+    <title>Discord Presence API - Python</title>
     <style>
         * {
             margin: 0;
@@ -212,7 +212,7 @@
     <div class="container">
         <div class="header">
             <h1>Discord Presence API</h1>
-            <p>Real-time Discord user presence and activity tracking</p>
+            <p>Python Version - Real-time Discord user presence and activity tracking</p>
         </div>
 
         <div class="demo-section">
@@ -220,7 +220,7 @@
             <p>Enter a Discord User ID to see their presence information:</p>
             
             <div class="input-group">
-                <input type="text" id="userId" placeholder="Enter Discord User ID (e.g., 1456392490566287529)">
+                <input type="text" id="userId" placeholder="Enter Discord User ID (e.g., 443748099106668544)">
                 <button class="btn" onclick="fetchUserData()">Get Presence</button>
                 <button class="btn" onclick="toggleRealTime()" id="realTimeBtn">Enable Real-time</button>
             </div>
@@ -244,16 +244,16 @@
                 <div class="api-endpoint">GET /v1/guilds</div>
                 
                 <h3>WebSocket</h3>
-                <div class="api-endpoint">WS /socket.io/</div>
+                <div class="api-endpoint">WebSocket connection available</div>
                 <p style="margin-top: 10px; color: #7f8c8d;">
-                    All endpoints require Authorization header with your Discord bot token.<br>
-                    Example: Authorization: Bot YOUR_BOT_TOKEN
+                    <strong>NO AUTHENTICATION REQUIRED</strong> - Public API like Lanyard<br>
+                    Just make requests to the endpoints directly!
                 </p>
             </div>
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         let socket = null;
         let currentUserId = null;
@@ -316,7 +316,7 @@
                             <h4>${activity.name}</h4>
                             ${activity.details ? `<p><strong>Details:</strong> ${activity.details}</p>` : ''}
                             ${activity.state ? `<p><strong>Status:</strong> ${activity.state}</p>` : ''}
-                            ${activity.timestamps?.start ? `<p><strong>Started:</strong> ${new Date(activity.timestamps.start).toLocaleString()}</p>` : ''}
+                            ${activity.timestamps?.start ? `<p><strong>Started:</strong> ${new Date(activity.timestamps.start * 1000).toLocaleString()}</p>` : ''}
                         </div>
                     `;
                 });
@@ -346,39 +346,32 @@
             currentUserId = userId;
 
             try {
-                // Fetch user data
-                const userResponse = await fetch(`/v1/users/${userId}`, {
-                    headers: {
-                        'Authorization': 'Bot ' + prompt('Enter your Discord Bot Token:')
-                    }
-                });
-
+                // Fetch user data - NO AUTHENTICATION NEEDED (like Lanyard)
+                const userResponse = await fetch(`/v1/users/${userId}`);
+                
                 if (!userResponse.ok) {
                     const error = await userResponse.json();
-                    throw new Error(error.error || 'Failed to fetch user data');
+                    throw new Error(error.error?.message || 'Failed to fetch user data');
                 }
 
                 const userData = await userResponse.json();
 
-                // Fetch presence data
-                const presenceResponse = await fetch(`/v1/presence/${userId}`, {
-                    headers: {
-                        'Authorization': 'Bot ' + prompt('Enter your Discord Bot Token:')
-                    }
-                });
-
+                // Fetch presence data - NO AUTHENTICATION NEEDED
+                const presenceResponse = await fetch(`/v1/presence/${userId}`);
+                
                 let presenceData = {};
                 if (presenceResponse.ok) {
-                    presenceData = await presenceResponse.json();
+                    const presenceResult = await presenceResponse.json();
+                    presenceData = presenceResult.data || {};
                 }
 
                 // Combine and render data
-                const combinedData = { ...userData, ...presenceData };
+                const combinedData = userData.success ? { ...userData.data, ...presenceData } : presenceData;
                 renderUserPresence(combinedData);
 
                 // Subscribe to real-time updates if enabled
                 if (realTimeEnabled && socket) {
-                    socket.emit('subscribe_user', userId);
+                    socket.emit('subscribe_user', { user_id: userId });
                 }
 
             } catch (error) {
@@ -415,9 +408,13 @@
                 updateConnectionStatus(true);
                 console.log('Connected to WebSocket');
                 
-                // Authenticate (you'll need to implement proper authentication)
-                const token = prompt('Enter your Discord Bot Token for WebSocket authentication:');
-                socket.emit('authenticate', token);
+                // NO AUTHENTICATION NEEDED for public WebSocket (like Lanyard)
+                console.log('WebSocket ready - no authentication required');
+                
+                // Subscribe to current user if available
+                if (currentUserId) {
+                    socket.emit('subscribe_user', { user_id: currentUserId });
+                }
             });
             
             socket.on('authenticated', (data) => {
@@ -425,7 +422,7 @@
                 
                 // Subscribe to current user if available
                 if (currentUserId) {
-                    socket.emit('subscribe_user', currentUserId);
+                    socket.emit('subscribe_user', { user_id: currentUserId });
                 }
             });
             
@@ -437,7 +434,7 @@
             });
             
             socket.on('userUpdate', (data) => {
-                if (data.userId === currentUserId) {
+                if (data.id === currentUserId) {
                     renderUserPresence(data);
                     console.log('User update received:', data);
                 }
@@ -454,10 +451,10 @@
         }
 
         // Check initial connection status
-        fetch('/health')
+        fetch('/v1/health')
             .then(response => response.json())
             .then(data => {
-                updateConnectionStatus(data.discord === 'connected');
+                updateConnectionStatus(data.discord.status === 'connected');
             })
             .catch(() => {
                 updateConnectionStatus(false);
