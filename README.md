@@ -1,205 +1,136 @@
 # Discord Presence API
 
-API for Discord user presence and activities with real-time updates.
+A Python API that provides Discord user presence data like Lanyard - no authentication required.
 
-## Features
+## 🚀 Quick Start
 
-- **REST API Endpoints**: Get user profiles and presence data
-- **Real-time WebSocket Updates**: Live presence changes via Discord Gateway
-- **Caching Layer**: Redis support with in-memory fallback
-- **Rate Limiting**: Built-in protection against abuse
-- **Security**: Bot token authentication and CORS protection
-- **Monitoring**: Health checks and structured logging
+### Option 1: Use Demo Bot (Easiest)
 
-## Quick Start
+1. **Add the demo bot** to your Discord server:
+   ```
+   https://discord.com/oauth2/authorize?client_id=1465105804976984135&permissions=8&integration_type=0&scope=bot
+   ```
 
-### Prerequisites
-- Node.js 16.0.0 or higher
-- Discord Bot Token (create at https://discord.com/developers/applications)
-- Optional: Redis server for caching
+2. **Clone and run:**
+   ```bash
+   git clone <your-repo>
+   cd Discord-Presence-API
+   cd api
+   pip install -r requirements.txt
+   python main.py
+   ```
 
-### Installation
+3. **Test at:** `http://localhost:3000/v1/users/YOUR_DISCORD_ID`
 
-1. Clone and setup:
+### Option 2: Create Your Own Bot
+
+1. **Create Discord Bot:**
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create application → Bot → Enable intents:
+     - Server Members Intent
+     - Presence Intent
+     - Guilds Intent
+
+2. **Invite Bot:**
+   ```
+   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&integration_type=0&scope=bot
+   ```
+
+3. **Setup .env:**
+   ```env
+   DISCORD_BOT_TOKEN=your_bot_token
+   DISCORD_CLIENT_ID=your_client_id
+   PORT=3000
+   ```
+
+4. **Deploy on Render.com:**
+   - Push to GitHub
+   - Create Web Service on Render
+   - Set environment variables
+   - Deploy
+
+## 📡 API Usage
+
+### REST API (No Auth Required)
+
 ```bash
-git clone <repository-url>
-cd Discord-Presence-API
-npm install
-```
+# Get user + presence data
+GET /v1/users/:user_id
 
-2. Configure environment:
-```bash
-cp .env.example .env
-# Edit .env with your bot token
-```
+# Get presence only
+GET /v1/presence/:user_id
 
-3. Start the server:
-```bash
-npm start
-```
-
-For development:
-```bash
-npm run dev
-```
-
-## API Endpoints
-
-### Authentication
-All endpoints require: `Authorization: Bot YOUR_BOT_TOKEN`
-
-### REST API
-
-#### Get User Profile
-```http
-GET /v1/users/:userId
-```
-
-#### Get User Presence
-```http
-GET /v1/presence/:userId?guildId=:guildId
-```
-
-#### Health Check
-```http
+# Health check
 GET /v1/health
 ```
 
-#### Get Guilds
-```http
-GET /v1/guilds
+### Example Response
+```json
+{
+  "success": true,
+  "data": {
+    "kv": {},
+    "discord_user": {
+      "id": "443748099106668544",
+      "username": "username",
+      "global_name": "Display Name",
+      "avatar": "avatar_hash"
+    },
+    "activities": [],
+    "discord_status": "online",
+    "listening_to_spotify": false
+  }
+}
 ```
 
 ### WebSocket
-Connect to `ws://localhost:3000` using Socket.IO.
-
-**Events:**
-- `authenticate` - Send bot token
-- `subscribe_user` - Subscribe to user updates
-- `presenceUpdate` - User presence changed
-- `userUpdate` - User profile updated
-
-## Example Usage
-
-### JavaScript/Node.js
 ```javascript
-const axios = require('axios');
-const io = require('socket.io-client');
-
-// REST API call
-const getUser = async (userId) => {
-  const response = await axios.get(`http://localhost:3000/v1/users/${userId}`, {
-    headers: {
-      'Authorization': 'Bot YOUR_BOT_TOKEN'
-    }
-  });
-  return response.data;
-};
-
-// WebSocket connection
-const socket = io('http://localhost:3000');
-
-socket.on('connect', () => {
-  socket.emit('authenticate', 'YOUR_BOT_TOKEN');
-  socket.emit('subscribe_user', '1456392490566287529');
-});
-
-socket.on('presenceUpdate', (data) => {
-  console.log('Presence updated:', data);
-});
+const socket = io('ws://localhost:3000');
+socket.emit('subscribe_user', { user_id: 'USER_ID' });
+socket.on('presenceUpdate', (data) => console.log(data));
 ```
 
-### React Component
-```jsx
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+## 🌟 Features
 
-const DiscordPresenceCard = ({ userId }) => {
-  const [user, setUser] = useState(null);
-  const [presence, setPresence] = useState(null);
-  
-  useEffect(() => {
-    const socket = io('http://localhost:3000');
-    
-    socket.on('connect', () => {
-      socket.emit('authenticate', 'YOUR_BOT_TOKEN');
-      socket.emit('subscribe_user', userId);
-    });
-    
-    socket.on('presenceUpdate', (data) => {
-      if (data.userId === userId) {
-        setPresence(data);
-      }
-    });
-    
-    // Fetch initial data
-    fetch(`http://localhost:3000/v1/users/${userId}`, {
-      headers: { 'Authorization': 'Bot YOUR_BOT_TOKEN' }
-    })
-    .then(res => res.json())
-    .then(setUser);
-    
-    return () => socket.close();
-  }, [userId]);
-  
-  return (
-    <div className="presence-card">
-      {user && (
-        <div>
-          <img src={user.avatar} alt={user.displayName} />
-          <h3>{user.displayName}</h3>
-          <p>Status: {presence?.status || 'offline'}</p>
-          {presence?.activities.map((activity, i) => (
-            <div key={i}>
-              <strong>{activity.name}</strong>
-              {activity.details && <p>{activity.details}</p>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+- ✅ **Public API** - No authentication needed
+- ✅ **Lanyard Compatible** - Same response format
+- ✅ **Real-time Updates** - WebSocket support
+- ✅ **Smart Caching** - Works even when bot is offline
+- ✅ **Easy Deployment** - Works on Render.com
+
+## 📁 Project Structure
+
+```
+Discord-Presence-API/
+├── api/
+│   ├── main.py           # FastAPI server
+│   ├── requirements.txt  # Dependencies
+│   ├── .env.example     # Config template
+│   └── static/
+│       └── index.html   # Demo interface
+└── README.md
 ```
 
-## Deployment
+## 🔧 Environment Variables
 
-### Render.com (Recommended)
-1. Push your code to GitHub
-2. Create a new Web Service on Render
-3. Set environment variables in Render dashboard
-4. Deploy - your API will be available at `https://your-app.onrender.com`
-
-### Environment Variables for Production
 ```env
-DISCORD_BOT_TOKEN=your_production_bot_token
+DISCORD_BOT_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_client_id
 PORT=3000
-NODE_ENV=production
-REDIS_URL=your_redis_url
-CORS_ORIGIN=https://yourdomain.com
+DEBUG=false
+REDIS_URL=redis://localhost:6379  # Optional
 ```
 
-## Discord Bot Setup
+## 🎯 Why This Over Lanyard?
 
-1. Go to https://discord.com/developers/applications
-2. Create a new application
-3. Go to the "Bot" section and create a bot
-4. Enable these Gateway Intents:
-   - Server Members Intent
-   - Presence Intent
-5. Copy the bot token to your `.env` file
-6. Invite the bot to your servers using this URL format:
-   ```
-   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=0
-   ```
+- **Self-hosted** - Full control over your data
+- **Python ecosystem** - Easy integration with Python projects
+- **Customizable** - Modify the code for your needs
+- **No rate limits** - Your own infrastructure
 
-## Important Notes
+---
 
-- The bot and users must be in the same Discord server to see presence data
-- The bot can be offline and still serve cached data
-- Real-time updates require the bot to be online and connected to Discord Gateway
-- Rate limiting is automatically enforced to prevent API abuse
+**Choose Option 1 for quick testing, or Option 2 for your own production setup! 🚀**
 
 ## API Response Format
 

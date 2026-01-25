@@ -55,6 +55,11 @@ Thumbs.db
 
 # Redis dump
 dump.rdb
+
+# Discord tokens and secrets
+**/.env
+**/DISCORD_BOT_TOKEN
+**/DISCORD_CLIENT_ID
 .dynamodb/
 
 # TernJS port file
