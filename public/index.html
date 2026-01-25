@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Presence API Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .presence-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin-right: 15px;
+            background: #e1e5e9;
+        }
+
+        .user-details h3 {
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+
+        .user-details p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online { background: #2ecc71; }
+        .status-idle { background: #f39c12; }
+        .status-dnd { background: #e74c3c; }
+        .status-offline { background: #95a5a6; }
+
+        .activity {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .activity h4 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .activity p {
+            margin: 4px 0;
+            color: #7f8c8d;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .connected {
+            background: #2ecc71;
+        }
+
+        .disconnected {
+            background: #e74c3c;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .error {
+            background: #fee;
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .api-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .api-info h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .api-endpoint {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        <span id="statusText">Disconnected</span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Discord Presence API</h1>
+            <p>Real-time Discord user presence and activity tracking</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>Try It Out</h2>
+            <p>Enter a Discord User ID to see their presence information:</p>
+            
+            <div class="input-group">
+                <input type="text" id="userId" placeholder="Enter Discord User ID (e.g., 1456392490566287529)">
+                <button class="btn" onclick="fetchUserData()">Get Presence</button>
+                <button class="btn" onclick="toggleRealTime()" id="realTimeBtn">Enable Real-time</button>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">
+                Loading user data...
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+
+            <div id="userPresence"></div>
+        </div>
+
+        <div class="demo-section">
+            <h2>API Endpoints</h2>
+            <div class="api-info">
+                <h3>REST API</h3>
+                <div class="api-endpoint">GET /v1/users/:userId</div>
+                <div class="api-endpoint">GET /v1/presence/:userId</div>
+                <div class="api-endpoint">GET /v1/health</div>
+                <div class="api-endpoint">GET /v1/guilds</div>
+                
+                <h3>WebSocket</h3>
+                <div class="api-endpoint">WS /socket.io/</div>
+                <p style="margin-top: 10px; color: #7f8c8d;">
+                    All endpoints require Authorization header with your Discord bot token.<br>
+                    Example: Authorization: Bot YOUR_BOT_TOKEN
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = null;
+        let currentUserId = null;
+        let realTimeEnabled = false;
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                status.className = 'connection-status connected';
+                statusText.textContent = 'Connected';
+            } else {
+                status.className = 'connection-status disconnected';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function renderUserPresence(data) {
+            const container = document.getElementById('userPresence');
+            
+            if (!data) {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data available</p>';
+                return;
+            }
+
+            const statusClass = `status-${data.status || 'offline'}`;
+            const avatar = data.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            
+            let html = `
+                <div class="presence-card">
+                    <div class="user-info">
+                        <img src="${avatar}" alt="Avatar" class="user-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                        <div class="user-details">
+                            <h3>${data.displayName || data.username || 'Unknown User'}</h3>
+                            <p>@${data.username || 'unknown'}#${data.discriminator || '0000'}</p>
+                            <p><span class="status-indicator ${statusClass}"></span>${data.status || 'offline'}</p>
+                        </div>
+                    </div>
+            `;
+
+            if (data.activities && data.activities.length > 0) {
+                data.activities.forEach(activity => {
+                    html += `
+                        <div class="activity">
+                            <h4>${activity.name}</h4>
+                            ${activity.details ? `<p><strong>Details:</strong> ${activity.details}</p>` : ''}
+                            ${activity.state ? `<p><strong>Status:</strong> ${activity.state}</p>` : ''}
+                            ${activity.timestamps?.start ? `<p><strong>Started:</strong> ${new Date(activity.timestamps.start).toLocaleString()}</p>` : ''}
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p style="color: #7f8c8d; margin-top: 10px;">No current activities</p>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function fetchUserData() {
+            const userId = document.getElementById('userId').value.trim();
+            
+            if (!userId) {
+                showError('Please enter a Discord User ID');
+                return;
+            }
+
+            if (!/^\d+$/.test(userId)) {
+                showError('Invalid User ID format. Must be numeric.');
+                return;
+            }
+
+            hideError();
+            showLoading(true);
+            currentUserId = userId;
+
+            try {
+                // Fetch user data
+                const userResponse = await fetch(`/v1/users/${userId}`, {
+                    headers: {
+                        'Authorization': 'Bot ' + prompt('Enter your Discord Bot Token:')
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    const error = await userResponse.json();
+                    throw new Error(error.error || 'Failed to fetch user data');
+                }
+
+                const userData = await userResponse.json();
+
+                // Fetch presence data
+                const presenceResponse = await fetch(`/v1/presence/${userId}`, {
+                    headers: {
+                        'Authorization': 'Bot ' + prompt('Enter your Discord Bot Token:')
+                    }
+                });
+
+                let presenceData = {};
+                if (presenceResponse.ok) {
+                    presenceData = await presenceResponse.json();
+                }
+
+                // Combine and render data
+                const combinedData = { ...userData, ...presenceData };
+                renderUserPresence(combinedData);
+
+                // Subscribe to real-time updates if enabled
+                if (realTimeEnabled && socket) {
+                    socket.emit('subscribe_user', userId);
+                }
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function toggleRealTime() {
+            const btn = document.getElementById('realTimeBtn');
+            
+            if (!realTimeEnabled) {
+                initSocket();
+                btn.textContent = 'Disable Real-time';
+                btn.style.background = '#e74c3c';
+                realTimeEnabled = true;
+            } else {
+                if (socket) {
+                    socket.disconnect();
+                    socket = null;
+                }
+                btn.textContent = 'Enable Real-time';
+                btn.style.background = '#667eea';
+                realTimeEnabled = false;
+                updateConnectionStatus(false);
+            }
+        }
+
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                updateConnectionStatus(true);
+                console.log('Connected to WebSocket');
+                
+                // Authenticate (you'll need to implement proper authentication)
+                const token = prompt('Enter your Discord Bot Token for WebSocket authentication:');
+                socket.emit('authenticate', token);
+            });
+            
+            socket.on('authenticated', (data) => {
+                console.log('WebSocket authenticated');
+                
+                // Subscribe to current user if available
+                if (currentUserId) {
+                    socket.emit('subscribe_user', currentUserId);
+                }
+            });
+            
+            socket.on('presenceUpdate', (data) => {
+                if (data.userId === currentUserId) {
+                    renderUserPresence(data);
+                    console.log('Real-time update received:', data);
+                }
+            });
+            
+            socket.on('userUpdate', (data) => {
+                if (data.userId === currentUserId) {
+                    renderUserPresence(data);
+                    console.log('User update received:', data);
+                }
+            });
+            
+            socket.on('disconnect', () => {
+                updateConnectionStatus(false);
+                console.log('Disconnected from WebSocket');
+            });
+            
+            socket.on('authentication_error', (data) => {
+                showError('WebSocket authentication failed: ' + data.error);
+            });
+        }
+
+        // Check initial connection status
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                updateConnectionStatus(data.discord === 'connected');
+            })
+            .catch(() => {
+                updateConnectionStatus(false);
+            });
+    </script>
+</body>
+</html>
