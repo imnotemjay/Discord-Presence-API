@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: discord-presence-api
+    env: python
+    buildCommand: cd api && python -m pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: cd api && python main.py
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: PORT
+        value: 10000
