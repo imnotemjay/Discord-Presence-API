@@ -8,14 +8,11 @@ from typing import Dict, Any, Optional
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
 import socketio
 import discord
 from discord.ext import commands
 import redis.asyncio as redis
 from dotenv import load_dotenv
-import aiofiles
 import json
 
 # Load environment variables
@@ -200,9 +197,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # API Routes
 @app.get("/")
@@ -509,12 +503,6 @@ async def subscribe_user(sid, data):
 @sio.event
 async def disconnect(sid):
     logger.info(f"Client disconnected: {sid}")
-
-# HTML demo interface
-@app.get("/", response_class=HTMLResponse)
-async def demo_interface():
-    async with aiofiles.open('static/index.html', 'r') as f:
-        return await f.read()
 
 # Startup and shutdown
 @app.on_event("startup")
