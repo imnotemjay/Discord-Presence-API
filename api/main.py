@@ -205,7 +205,9 @@ async def root():
         "message": "Discord Presence API", 
         "version": "1.0.0",
         "info": "Public Discord presence API - no authentication required",
-        "monitored_user_count": len(cache.memory_cache) if not cache.redis_client else "connected"
+        "monitored_user_count": len(cache.memory_cache) if not cache.redis_client else "connected",
+        "developed_by": "MJ",
+        "github": "https://github.com/imnotemjay/"
     }
 
 @app.get(f"/{config.API_VERSION}/health")

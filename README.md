@@ -22,7 +22,26 @@ A Python API that provides Discord user presence data like Lanyard - no authenti
 
 3. **Test at:** `http://localhost:3000/v1/users/YOUR_DISCORD_ID`
 
-### Option 2: Create Your Own Bot
+### Option 2: Ready-to-Use API (No Setup Required)
+
+**Public API endpoints - already deployed and working:**
+
+```
+https://discord-presence-api-gexg.onrender.com/v1/users/:user_id
+https://api.emjay.dev/v1/users/:user_id
+```
+
+**Usage examples:**
+```bash
+# Get user presence data
+curl https://api.emjay.dev/v1/users/443748099106668544
+
+# WebSocket connection
+const socket = io('wss://api.emjay.dev');
+socket.emit('subscribe_user', { user_id: '443748099106668544' });
+```
+
+### Option 3: Create Your Own Bot
 
 1. **Create Discord Bot:**
    - Go to [Discord Developer Portal](https://discord.com/developers/applications)
