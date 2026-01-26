@@ -2,7 +2,7 @@ services:
   - type: web
     name: discord-presence-api
     env: python
-    buildCommand: cd api && pip install --upgrade pip --no-cache-dir && pip install --no-cache-dir -r requirements.txt
+    buildCommand: cd api && pip install -r requirements.txt
     startCommand: cd api && python main.py
     envVars:
       - key: DISCORD_BOT_TOKEN
