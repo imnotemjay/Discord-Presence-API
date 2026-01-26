@@ -2,7 +2,6 @@ services:
   - type: web
     name: discord-presence-api
     runtime: python
-    pythonVersion: 3.11.9
     buildCommand: cd api && pip install -r requirements.txt
     startCommand: cd api && python main.py
     envVars:
