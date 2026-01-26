@@ -4,30 +4,17 @@ A Python API that provides Discord user presence data like Lanyard - no authenti
 
 ## 🚀 Quick Start
 
-### Option 1: Use Demo Bot (Easiest)
+### Option 1: Ready-to-Use API (Easiest)
 
-1. **Add the demo bot** to your Discord server:
-   ```
-   https://discord.com/oauth2/authorize?client_id=1465105804976984135&permissions=8&integration_type=0&scope=bot
-   ```
+**Add bot to your server:**
+```
+https://discord.com/oauth2/authorize?client_id=1465105804976984135&permissions=8&integration_type=0&scope=bot
+```
 
-2. **Clone and run:**
-   ```bash
-   git clone <your-repo>
-   cd Discord-Presence-API
-   cd api
-   pip install -r requirements.txt
-   python main.py
-   ```
-
-3. **Test at:** `http://localhost:3000/v1/users/YOUR_DISCORD_ID`
-
-### Option 2: Ready-to-Use API (No Setup Required)
-
-**Public API endpoints - already deployed and working:**
-
+**Ready to use API:**
 ```
 https://discord-presence-api-gexg.onrender.com/v1/users/:user_id
+OR
 https://api.emjay.dev/v1/users/:user_id
 ```
 
@@ -41,28 +28,40 @@ const socket = io('wss://api.emjay.dev');
 socket.emit('subscribe_user', { user_id: '443748099106668544' });
 ```
 
-### Option 3: Create Your Own Bot
+### Option 2: Clone Repo and Create Your Own Bot
 
-1. **Create Discord Bot:**
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/imnotemjay/Discord-Presence-API.git
+   cd Discord-Presence-API
+   cd api
+   ```
+
+2. **Create Discord Bot:**
    - Go to [Discord Developer Portal](https://discord.com/developers/applications)
    - Create application → Bot → Enable intents:
      - Server Members Intent
      - Presence Intent
      - Guilds Intent
 
-2. **Invite Bot:**
+3. **Invite Your Bot:**
    ```
    https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&integration_type=0&scope=bot
    ```
 
-3. **Setup .env:**
-   ```env
-   DISCORD_BOT_TOKEN=your_bot_token
-   DISCORD_CLIENT_ID=your_client_id
-   PORT=3000
+4. **Setup Environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your bot token and client ID
    ```
 
-4. **Deploy on Render.com:**
+5. **Install and Run:**
+   ```bash
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+6. **Deploy on Render.com:**
    - Push to GitHub
    - Create Web Service on Render
    - Set environment variables
