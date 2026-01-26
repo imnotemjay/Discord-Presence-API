@@ -22,9 +22,11 @@ https://api.emjay.dev/v1/users/:user_id
 ```bash
 # Get user presence data
 curl https://api.emjay.dev/v1/users/443748099106668544
+# OR
+curl https://discord-presence-api-gexg.onrender.com/v1/users/443748099106668544
 
 # WebSocket connection
-const socket = io('wss://api.emjay.dev');
+const socket = io('wss://discord-presence-api-gexg.onrender.com');
 socket.emit('subscribe_user', { user_id: '443748099106668544' });
 ```
 
