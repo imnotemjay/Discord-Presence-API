@@ -256,6 +256,29 @@ async def ping():
     """Simple ping endpoint for uptime monitoring services like UptimeRobot"""
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
+@app.get("/debug")
+async def debug():
+    """Debug endpoint to check bot status and configuration"""
+    return {
+        "config": {
+            "discord_bot_token_set": bool(config.DISCORD_BOT_TOKEN),
+            "discord_client_id_set": bool(config.DISCORD_CLIENT_ID),
+            "host": config.HOST,
+            "port": config.PORT,
+            "debug": config.DEBUG,
+            "redis_url_set": bool(config.REDIS_URL)
+        },
+        "bot": {
+            "ready": bot.ready,
+            "user": str(bot.user) if bot.user else None,
+            "guilds": len(bot.guilds) if bot.ready else 0
+        },
+        "cache": {
+            "redis_connected": bool(cache.redis_client),
+            "memory_cache_size": len(cache.memory_cache)
+        }
+    }
+
 @app.get(f"/{config.API_VERSION}/users/{{user_id}}")
 async def get_user(user_id: str):
     """Get user profile + presence data (Lanyard style)"""
@@ -541,13 +564,25 @@ async def disconnect(sid):
 async def startup_event():
     await cache.connect_redis()
     
-    # Start Discord bot
+    # Start Discord bot in background
     try:
         bot.sio = sio
-        asyncio.create_task(bot.start(config.DISCORD_BOT_TOKEN))
-        logger.info("Discord bot starting...")
+        asyncio.create_task(start_discord_bot())
+        logger.info("Discord bot startup initiated...")
     except Exception as e:
-        logger.warning(f"Failed to start Discord bot: {e}")
+        logger.error(f"Failed to initiate Discord bot startup: {e}")
+
+async def start_discord_bot():
+    """Start Discord bot with proper error handling"""
+    try:
+        await bot.start(config.DISCORD_BOT_TOKEN)
+    except discord.LoginFailure:
+        logger.error("Invalid Discord bot token - check your DISCORD_BOT_TOKEN environment variable")
+    except discord.PrivilegedIntentsRequired:
+        logger.error("Privileged intents required - enable Server Members and Presence intents in Discord Developer Portal")
+    except Exception as e:
+        logger.error(f"Discord bot failed to start: {e}")
+        logger.info("API will continue running without Discord bot functionality")
 
 @app.on_event("shutdown")
 async def shutdown_event():
