@@ -4,6 +4,14 @@ services:
     runtime: python
     buildCommand: cd api && pip install -r requirements.txt
     startCommand: cd api && python main.py
+    healthCheckPath: /ping
+    healthCheck:
+      path: /ping
+      checkInterval: 30
+      timeout: 10
+      gracePeriod: 60
+    autoDeploy: true
+    plan: starter
     envVars:
       - key: DISCORD_BOT_TOKEN
         sync: false

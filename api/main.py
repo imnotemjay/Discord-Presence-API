@@ -2,6 +2,8 @@ import os
 import asyncio
 import logging
 import time
+import signal
+import sys
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -78,6 +80,29 @@ class SimpleCache:
             return None
 
 cache = SimpleCache()
+
+# Graceful shutdown handling
+shutdown_event = asyncio.Event()
+
+def signal_handler():
+    logger.info("Received shutdown signal, initiating graceful shutdown...")
+    shutdown_event.set()
+
+async def graceful_shutdown():
+    """Gracefully shutdown all services"""
+    logger.info("Starting graceful shutdown...")
+    
+    # Shutdown Discord bot
+    if bot.is_ready():
+        await bot.close()
+        logger.info("Discord bot shutdown complete")
+    
+    # Close Redis connection
+    if cache.redis_client:
+        await cache.redis_client.close()
+        logger.info("Redis connection closed")
+    
+    logger.info("Graceful shutdown complete")
 
 # Discord bot
 class DiscordBot(commands.Bot):
@@ -225,6 +250,11 @@ async def health_check():
         },
         "uptime": "running"
     }
+
+@app.get("/ping")
+async def ping():
+    """Simple ping endpoint for uptime monitoring services like UptimeRobot"""
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 @app.get(f"/{config.API_VERSION}/users/{{user_id}}")
 async def get_user(user_id: str):
@@ -528,9 +558,36 @@ async def shutdown_event():
 
 # Run server
 if __name__ == "__main__":
-    uvicorn.run(
+    # Setup signal handlers
+    signal.signal(signal.SIGINT, lambda s, f: signal_handler())
+    signal.signal(signal.SIGTERM, lambda s, f: signal_handler())
+    
+    # Create server instance
+    config = uvicorn.Config(
         sio_app,
         host=config.HOST,
         port=config.PORT,
-        reload=config.DEBUG
+        reload=config.DEBUG,
+        log_level="info"
     )
+    server = uvicorn.Server(config)
+    
+    async def run_server():
+        """Run server with graceful shutdown handling"""
+        try:
+            await server.serve()
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+        finally:
+            await graceful_shutdown()
+    
+    # Run with shutdown event monitoring
+    try:
+        asyncio.run(run_server())
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+    finally:
+        logger.info("Application shutdown complete")
+        sys.exit(0)
