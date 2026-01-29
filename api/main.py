@@ -279,6 +279,20 @@ async def debug():
         }
     }
 
+@app.post("/restart-bot")
+async def restart_bot():
+    """Manually restart the Discord bot"""
+    try:
+        if bot.is_ready():
+            await bot.close()
+            logger.info("Bot closed for restart")
+        
+        # Start bot again
+        asyncio.create_task(start_discord_bot())
+        return {"status": "success", "message": "Bot restart initiated"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get(f"/{config.API_VERSION}/users/{{user_id}}")
 async def get_user(user_id: str):
     """Get user profile + presence data (Lanyard style)"""
@@ -573,16 +587,53 @@ async def startup_event():
         logger.error(f"Failed to initiate Discord bot startup: {e}")
 
 async def start_discord_bot():
-    """Start Discord bot with proper error handling"""
-    try:
-        await bot.start(config.DISCORD_BOT_TOKEN)
-    except discord.LoginFailure:
-        logger.error("Invalid Discord bot token - check your DISCORD_BOT_TOKEN environment variable")
-    except discord.PrivilegedIntentsRequired:
-        logger.error("Privileged intents required - enable Server Members and Presence intents in Discord Developer Portal")
-    except Exception as e:
-        logger.error(f"Discord bot failed to start: {e}")
-        logger.info("API will continue running without Discord bot functionality")
+    """Start Discord bot with retry logic and exponential backoff"""
+    import random
+    
+    max_retries = 5
+    base_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Add jitter to avoid synchronized retries
+            delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+            
+            if attempt > 0:
+                logger.info(f"Retrying Discord bot connection in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(delay)
+            
+            await bot.start(config.DISCORD_BOT_TOKEN)
+            return  # Success, exit function
+            
+        except discord.LoginFailure:
+            logger.error("Invalid Discord bot token - check your DISCORD_BOT_TOKEN environment variable")
+            break  # Don't retry if token is invalid
+            
+        except discord.PrivilegedIntentsRequired:
+            logger.error("Privileged intents required - enable Server Members and Presence intents in Discord Developer Portal")
+            break  # Don't retry if intents are missing
+            
+        except discord.HTTPException as e:
+            if "rate limited" in str(e).lower() or "429" in str(e):
+                logger.warning(f"Discord API rate limited (attempt {attempt + 1}/{max_retries})")
+                if attempt == max_retries - 1:
+                    logger.error("Max retries reached due to rate limiting. Bot will retry in background...")
+                    # Schedule a retry after a longer delay
+                    await asyncio.sleep(300)  # 5 minutes
+                    asyncio.create_task(start_discord_bot())
+                    return
+                continue  # Retry with exponential backoff
+            else:
+                logger.error(f"Discord HTTP error: {e}")
+                if attempt == max_retries - 1:
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Discord bot failed to start (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt == max_retries - 1:
+                break
+    
+    logger.info("API will continue running without Discord bot functionality")
 
 @app.on_event("shutdown")
 async def shutdown_event():
