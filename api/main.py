@@ -37,6 +37,7 @@ class Config:
     REDIS_URL = os.getenv('REDIS_URL')
     CORS_ORIGIN = os.getenv('CORS_ORIGIN', '*')
     API_VERSION = os.getenv('API_VERSION', 'v1')
+    DISABLE_DISCORD_BOT = os.getenv('DISABLE_DISCORD_BOT', 'false').lower() == 'true'
 
 config = Config()
 
@@ -263,6 +264,7 @@ async def debug():
         "config": {
             "discord_bot_token_set": bool(config.DISCORD_BOT_TOKEN),
             "discord_client_id_set": bool(config.DISCORD_CLIENT_ID),
+            "discord_bot_disabled": config.DISABLE_DISCORD_BOT,
             "host": config.HOST,
             "port": config.PORT,
             "debug": config.DEBUG,
@@ -578,25 +580,28 @@ async def disconnect(sid):
 async def startup_event():
     await cache.connect_redis()
     
-    # Start Discord bot in background
-    try:
-        bot.sio = sio
-        asyncio.create_task(start_discord_bot())
-        logger.info("Discord bot startup initiated...")
-    except Exception as e:
-        logger.error(f"Failed to initiate Discord bot startup: {e}")
+    # Start Discord bot in background if not disabled
+    if config.DISABLE_DISCORD_BOT:
+        logger.info("Discord bot disabled via DISABLE_DISCORD_BOT environment variable")
+    else:
+        try:
+            bot.sio = sio
+            asyncio.create_task(start_discord_bot())
+            logger.info("Discord bot startup initiated...")
+        except Exception as e:
+            logger.error(f"Failed to initiate Discord bot startup: {e}")
 
 async def start_discord_bot():
-    """Start Discord bot with retry logic and exponential backoff"""
+    """Start Discord bot with aggressive retry logic for rate limits"""
     import random
     
-    max_retries = 5
-    base_delay = 5  # seconds
+    max_retries = 8
+    base_delay = 30  # Start with 30 seconds
     
     for attempt in range(max_retries):
         try:
             # Add jitter to avoid synchronized retries
-            delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+            delay = base_delay * (1.5 ** attempt) + random.uniform(5, 15)
             
             if attempt > 0:
                 logger.info(f"Retrying Discord bot connection in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
@@ -617,9 +622,9 @@ async def start_discord_bot():
             if "rate limited" in str(e).lower() or "429" in str(e):
                 logger.warning(f"Discord API rate limited (attempt {attempt + 1}/{max_retries})")
                 if attempt == max_retries - 1:
-                    logger.error("Max retries reached due to rate limiting. Bot will retry in background...")
-                    # Schedule a retry after a longer delay
-                    await asyncio.sleep(300)  # 5 minutes
+                    logger.error("Max retries reached due to rate limiting. Will retry in 15 minutes...")
+                    # Schedule a retry after a much longer delay
+                    await asyncio.sleep(900)  # 15 minutes
                     asyncio.create_task(start_discord_bot())
                     return
                 continue  # Retry with exponential backoff
