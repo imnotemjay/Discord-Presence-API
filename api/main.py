@@ -563,14 +563,14 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, lambda s, f: signal_handler())
     
     # Create server instance
-    config = uvicorn.Config(
+    uvicorn_config = uvicorn.Config(
         sio_app,
         host=config.HOST,
         port=config.PORT,
         reload=config.DEBUG,
         log_level="info"
     )
-    server = uvicorn.Server(config)
+    server = uvicorn.Server(uvicorn_config)
     
     async def run_server():
         """Run server with graceful shutdown handling"""
